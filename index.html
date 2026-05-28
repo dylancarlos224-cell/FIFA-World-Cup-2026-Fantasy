@@ -163,6 +163,15 @@ function handleConfirmationCallback(){
     const token=hash.split('recovery_token=')[1]?.split('&')[0];
     if(token){toast('Password recovery is not yet implemented.','err');window.location.hash='';}
   }
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('payment')==='success'){
+    toast('Payment confirmed — you\'re in!','ok');
+    if(SESSION.user)SESSION.user.entered=true;
+    window.history.replaceState({},'',window.location.pathname);
+  }else if(params.get('payment')==='cancelled'){
+    toast('Payment cancelled.','err');
+    window.history.replaceState({},'',window.location.pathname);
+  }
 }
 
 // ── App data ─────────────────────────────────────────────────
@@ -409,21 +418,28 @@ function openLogin(){
 function openEnter(){
   openModal(`
     <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Enter the pool</h3>
-    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Once you integrate Stripe, this button redirects to Stripe Checkout. For now, it marks you as entered.</p>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">You'll be redirected to Stripe to complete your payment securely.</p>
     <div style="padding:14px 16px;background:rgba(255,255,255,0.04);border-radius:var(--r8);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:13px;color:var(--t2);">Entry fee</span><span style="font-size:24px;font-weight:800;">$10</span>
     </div>
-    <div style="font-size:12px;color:var(--t3);margin-bottom:1rem;">🔒 Real payments via Stripe — see the Dev Guide tab to integrate.</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:1rem;">🔒 Secure payment via Stripe</div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-g" id="mc">Cancel</button>
-      <button class="btn btn-s" id="mp">Confirm entry (demo)</button>
+      <button class="btn btn-s" id="mp">Pay $10 & Enter</button>
     </div>`,()=>{
     document.getElementById('mc').onclick=closeModal;
     document.getElementById('mp').onclick=async()=>{
       const btn=document.getElementById('mp');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
-      await markEntered();
-      SESSION.user.entered=true;
-      closeModal();SESSION.view='groups';render();
+      try{
+        const res=await fetch('/.netlify/functions/create-checkout',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({userId:SESSION.user.id,username:SESSION.user.username})
+        });
+        const data=await res.json();
+        if(data.url){window.location.href=data.url;}
+        else{toast('Could not start checkout','err');btn.textContent='Pay $10 & Enter';btn.disabled=false;}
+      }catch(e){toast('Checkout error: '+e.message,'err');btn.textContent='Pay $10 & Enter';btn.disabled=false;}
     };
   });
 }
