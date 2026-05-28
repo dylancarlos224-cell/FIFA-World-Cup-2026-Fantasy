@@ -80,6 +80,12 @@ input::placeholder{color:var(--t3);}
 .gs-team{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:12px;cursor:pointer;transition:background .15s;}
 .gs-team:not(:last-child){border-bottom:0.5px solid var(--bo3);}
 .gs-team:hover{background:rgba(167,139,250,0.1);}
+.gs-team[draggable="true"]{cursor:grab;user-select:none;}
+.gs-team[draggable="true"]:active{cursor:grabbing;}
+.gs-team.dragging{opacity:.35;background:rgba(124,58,237,0.2);}
+.gs-team.drag-over{border-top:2px solid #7c3aed;margin-top:-2px;}
+.gs-team .drag-handle{color:var(--t3);font-size:12px;flex-shrink:0;opacity:.5;transition:opacity .15s;}
+.gs-team:hover .drag-handle{opacity:1;}
 .gs-team.rk1{background:rgba(52,211,153,0.12);}
 .gs-team.rk2{background:rgba(167,139,250,0.1);}
 .gs-team.rk3{background:rgba(251,191,36,0.08);}
@@ -111,55 +117,52 @@ input::placeholder{color:var(--t3);}
 (function(){
 'use strict';
 
-// ── Supabase config ──────────────────────────────────────────
-const SB_URL='https://wnksdmlhexwjevnnyprf.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indua3NkbWxoZXh3amV2bm55cHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjYxNDEsImV4cCI6MjA5NTQwMjE0MX0.tVwVg7HqfUZdQLFT2H0ywfPFuciEYDJDOWgnWogXkSk';
+// ── Netlify Identity (GoTrue) auth helpers ───────────────────
+const IDENTITY='/.netlify/identity';
 
-// ── Supabase REST helpers ────────────────────────────────────
-const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+async function authSignUp(email,password,username){
+  const r=await fetch(`${IDENTITY}/signup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,data:{full_name:username}})});
+  const j=await r.json();if(j.code>=400||j.msg)throw new Error(j.msg||'Signup failed');return j;
+}
+async function authLogin(email,password){
+  const r=await fetch(`${IDENTITY}/token`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=password&username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`});
+  const j=await r.json();if(j.error)throw new Error(j.error_description||j.msg||'Login failed');return j;
+}
+async function authLogout(token){
+  await fetch(`${IDENTITY}/logout`,{method:'POST',headers:{'Authorization':'Bearer '+token}}).catch(()=>{});
+}
+function setAuthCookie(token){document.cookie=`nf_jwt=${token};path=/;max-age=3600;SameSite=Lax`;}
+function clearAuthCookie(){document.cookie='nf_jwt=;path=/;max-age=0';}
 
-async function sbGet(table,query=''){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:H});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
-}
-async function sbPost(table,body){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:H,body:JSON.stringify(body)});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
-}
-async function sbPatch(table,query,body){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
-}
-// Auth helpers
-async function sbSignUp(email,password){
-  const r=await fetch(`${SB_URL}/auth/v1/signup`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-  const j=await r.json();if(j.error)throw new Error(j.error.message||j.msg||JSON.stringify(j));return j;
-}
-async function sbSignIn(email,password){
-  const r=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-  const j=await r.json();if(j.error)throw new Error(j.error.message||j.error_description||JSON.stringify(j));return j;
-}
-async function sbSignOut(token){
-  await fetch(`${SB_URL}/auth/v1/logout`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});
-}
-
-// Authed headers
-function aH(token){return{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'};}
-
-async function sbGetAuthed(table,query,token){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:aH(token)});
+// ── API helpers (authenticated via nf_jwt cookie) ────────────
+async function apiGet(path){
+  const r=await fetch(path,{credentials:'same-origin'});
   if(!r.ok)throw new Error(await r.text());return r.json();
 }
-async function sbUpsert(table,body,token){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...aH(token),'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(body)});
+async function apiPost(path,body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
   if(!r.ok)throw new Error(await r.text());return r.json();
 }
-async function sbPatchAuthed(table,query,body,token){
-  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{method:'PATCH',headers:{...aH(token),'Prefer':'return=representation'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error(await r.text());return r.json();
+
+function parseJwt(token){try{return JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(e){return{};}}
+
+// Handle email confirmation callback (#confirmation_token=xxx)
+function handleConfirmationCallback(){
+  const hash=window.location.hash;
+  if(hash.includes('confirmation_token=')){
+    const token=hash.split('confirmation_token=')[1]?.split('&')[0];
+    if(token){
+      fetch(`${IDENTITY}/verify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,type:'signup'})})
+        .then(r=>r.json())
+        .then(()=>{toast('Email confirmed! You can now log in.','ok');openLogin();})
+        .catch(()=>{toast('Confirmation failed — try logging in.','err');});
+      window.location.hash='';
+    }
+  }
+  if(hash.includes('recovery_token=')){
+    const token=hash.split('recovery_token=')[1]?.split('&')[0];
+    if(token){toast('Password recovery is not yet implemented.','err');window.location.hash='';}
+  }
 }
 
 // ── App data ─────────────────────────────────────────────────
@@ -201,7 +204,7 @@ function buildBracket(){
   return ms;
 }
 
-// ── Session state (in-memory, persisted to Supabase) ─────────
+// ── Session state ────────────────────────────────────────────
 let SESSION={
   user:null,        // {id, email, username, entered, token}
   view:'home',
@@ -209,7 +212,7 @@ let SESSION={
   groupOrder:{},    // {A:[0,1,2,3]...}
   third8:GKEYS.slice(0,8),
   picks:{},
-  leaderboard:[],   // loaded from Supabase
+  leaderboard:[],
 };
 GKEYS.forEach(g=>{SESSION.groupOrder[g]=[0,1,2,3];});
 
@@ -262,17 +265,16 @@ function calcScore(picks){
   return knock;
 }
 
-// ── Supabase data ops ────────────────────────────────────────
+// ── Data ops (Netlify Database via API functions) ────────────
 async function loadLeaderboard(){
   try{
-    // Join picks with profiles to get username
-    const rows=await sbGet('picks','select=score,user_id,group_order,knockout_picks,profiles(username,entered)&order=score.desc');
-    SESSION.leaderboard=rows.filter(r=>r.profiles).map(r=>({
-      username:r.profiles.username,
+    const rows=await apiGet('/api/leaderboard');
+    SESSION.leaderboard=rows.map(r=>({
+      username:r.username,
       score:r.score||0,
-      group_order:r.group_order,
-      knockout_picks:r.knockout_picks,
-      isMe:SESSION.user&&r.user_id===SESSION.user.id,
+      group_order:r.groupOrder,
+      knockout_picks:r.knockoutPicks,
+      isMe:SESSION.user&&r.userId===SESSION.user.id,
     }));
     setStatus(`${SESSION.leaderboard.length} players · live`);
   }catch(e){setStatus('Connected');}
@@ -282,14 +284,12 @@ async function savePicksToDb(){
   if(!SESSION.user)return;
   const score=calcScore(SESSION.picks);
   try{
-    await sbUpsert('picks',{
-      user_id:SESSION.user.id,
-      group_order:SESSION.groupOrder,
+    await apiPost('/api/picks',{
+      groupOrder:SESSION.groupOrder,
       third8:SESSION.third8,
-      knockout_picks:SESSION.picks,
+      knockoutPicks:SESSION.picks,
       score,
-      updated_at:new Date().toISOString(),
-    },SESSION.user.token);
+    });
     setStatus('Picks saved ✓');
     await loadLeaderboard();
   }catch(e){toast('Save failed: '+e.message,'err');}
@@ -298,7 +298,7 @@ async function savePicksToDb(){
 async function markEntered(){
   if(!SESSION.user)return;
   try{
-    await sbPatchAuthed('profiles','id=eq.'+SESSION.user.id,{entered:true},SESSION.user.token);
+    await apiPost('/api/enter',{});
     SESSION.user.entered=true;
     toast('Payment confirmed — you\'re in!','ok');
   }catch(e){toast('Error: '+e.message,'err');}
@@ -308,7 +308,7 @@ async function markEntered(){
 function openSignup(){
   openModal(`
     <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Create account</h3>
-    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Saved to Supabase — access from any device.</p>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Your picks are saved in the cloud — access from any device.</p>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Username</label><input id="s-user" type="text" placeholder="e.g. GoalMachine99"/></div>
       <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Email</label><input id="s-email" type="email" placeholder="you@example.com"/></div>
@@ -329,17 +329,25 @@ function openSignup(){
       if(pass.length<6){errEl.innerHTML='<div class="err-box">Password must be at least 6 characters</div>';return;}
       const btn=document.getElementById('s-create');btn.innerHTML='<span class="spinner"></span> Creating…';btn.disabled=true;
       try{
-        const authData=await sbSignUp(email,pass);
-        if(!authData.access_token&&!authData.user)throw new Error('Signup failed — check your email for a confirmation link if required.');
-        const token=authData.access_token;
-        const userId=authData.user?.id||authData.id;
-        // Create profile
-        try{await sbUpsert('profiles',{id:userId,username,entered:false},token);}catch(e){/* may already exist */}
-        SESSION.user={id:userId,email,username,entered:false,token};
-        closeModal();render();
-        toast('Welcome, '+username+'! 🎉','ok');
-        setStatus('Signed in as '+username);
-        await loadLeaderboard();
+        const signupData=await authSignUp(email,pass,username);
+        // Try auto-login (works if autoconfirm is on)
+        try{
+          const authData=await authLogin(email,pass);
+          const token=authData.access_token;
+          setAuthCookie(token);
+          const userId=parseJwt(token).sub;
+          // Create profile
+          try{await apiPost('/api/profile',{username});}catch(e){/* may already exist */}
+          SESSION.user={id:userId,email,username,entered:false,token};
+          closeModal();render();
+          toast('Welcome, '+username+'! 🎉','ok');
+          setStatus('Signed in as '+username);
+          await loadLeaderboard();
+        }catch(loginErr){
+          // Autoconfirm is off — user must confirm email
+          closeModal();
+          toast('Check your email to confirm your account, then log in.','ok');
+        }
       }catch(e){
         errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
         btn.innerHTML='Create account';btn.disabled=false;
@@ -368,23 +376,27 @@ function openLogin(){
       const errEl=document.getElementById('l-err');
       const btn=document.getElementById('l-login');btn.innerHTML='<span class="spinner"></span> Logging in…';btn.disabled=true;
       try{
-        const authData=await sbSignIn(email,pass);
+        const authData=await authLogin(email,pass);
         const token=authData.access_token;
-        const userId=authData.user?.id;
+        setAuthCookie(token);
+        const claims=parseJwt(token);
+        const userId=claims.sub;
+        const username=claims.user_metadata?.full_name||email.split('@')[0];
         // Load profile
-        const profiles=await sbGetAuthed('profiles',`id=eq.${userId}&select=username,entered`,token);
-        const profile=profiles[0]||{username:email.split('@')[0],entered:false};
+        let profile;
+        try{profile=await apiGet('/api/profile');}catch(e){profile={username,entered:false};}
+        // Create profile if it doesn't exist yet
+        if(!profile.id){try{await apiPost('/api/profile',{username});}catch(e){}}
         // Load picks
-        const picksRows=await sbGetAuthed('picks',`user_id=eq.${userId}&select=group_order,third8,knockout_picks`,token);
-        if(picksRows[0]){
-          SESSION.groupOrder=picksRows[0].group_order||SESSION.groupOrder;
-          SESSION.third8=picksRows[0].third8||SESSION.third8;
-          SESSION.picks=picksRows[0].knockout_picks||{};
-        }
-        SESSION.user={id:userId,email,username:profile.username,entered:profile.entered,token};
+        let picksData;
+        try{picksData=await apiGet('/api/picks');}catch(e){picksData={};}
+        if(picksData.groupOrder)SESSION.groupOrder=picksData.groupOrder;
+        if(picksData.third8)SESSION.third8=picksData.third8;
+        if(picksData.knockoutPicks)SESSION.picks=picksData.knockoutPicks;
+        SESSION.user={id:userId,email,username:profile.username||username,entered:profile.entered||false,token};
         closeModal();render();
-        toast('Welcome back, '+profile.username+'!','ok');
-        setStatus('Signed in as '+profile.username);
+        toast('Welcome back, '+(profile.username||username)+'!','ok');
+        setStatus('Signed in as '+(profile.username||username));
         await loadLeaderboard();
       }catch(e){
         errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
@@ -397,7 +409,7 @@ function openLogin(){
 function openEnter(){
   openModal(`
     <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Enter the pool</h3>
-    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Once you integrate Stripe, this button redirects to Stripe Checkout. For now, it marks you as entered in Supabase.</p>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Once you integrate Stripe, this button redirects to Stripe Checkout. For now, it marks you as entered.</p>
     <div style="padding:14px 16px;background:rgba(255,255,255,0.04);border-radius:var(--r8);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:13px;color:var(--t2);">Entry fee</span><span style="font-size:24px;font-weight:800;">$10</span>
     </div>
@@ -423,7 +435,7 @@ function pickWinner(mid,team){
   SESSION.picks[mid]=team;clearOrphans();
   if(Object.keys(SESSION.picks).length===31&&!SESSION._confetti){SESSION._confetti=true;if(window.confetti){confetti({particleCount:120,spread:70,origin:{y:.6}});}}
   render();
-  // Debounce save — write to Supabase 2s after last pick
+  // Debounce save — write 2s after last pick
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>savePicksToDb(),2000);
 }
@@ -472,12 +484,12 @@ function renderHome(){
 function renderGroups(){
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:1rem;">
-      <div><div style="font-size:14px;font-weight:600;">Group Stage Predictions</div><div style="font-size:12px;color:var(--t2);">Click a team to move it up · earn 1 pt per correct position</div></div>
+      <div><div style="font-size:14px;font-weight:600;">Group Stage Predictions</div><div style="font-size:12px;color:var(--t2);">Drag teams to reorder · earn 1 pt per correct position</div></div>
       <button class="btn" id="gs-reset"><i class="ti ti-refresh"></i> Reset</button>
     </div>
     <div style="padding:8px 12px;background:rgba(251,191,36,0.08);border:0.5px solid rgba(251,191,36,0.2);border-radius:var(--r8);font-size:12px;color:var(--tw);margin-bottom:1rem;">💡 <strong>Green = 1st · Purple = 2nd · Gold = 3rd (maybe) · Dim = eliminated</strong></div>
     <div class="gs-grid" style="margin-bottom:1.25rem;">
-      ${GKEYS.map(g=>{const st=getStandings(g);return`<div class="gs-card"><div class="gs-hd">Group ${g}</div>${st.map((t,i)=>`<div class="gs-team rk${i+1}" data-g="${g}" data-pos="${i}"><span class="pos">${i+1}</span><span>${t.flag}</span><span class="tn">${t.name}</span></div>`).join('')}</div>`;}).join('')}
+      ${GKEYS.map(g=>{const st=getStandings(g);return`<div class="gs-card"><div class="gs-hd">Group ${g}</div>${st.map((t,i)=>`<div class="gs-team rk${i+1}" data-g="${g}" data-pos="${i}" draggable="true"><span class="drag-handle"><i class="ti ti-grip-vertical"></i></span><span class="pos">${i+1}</span><span>${t.flag}</span><span class="tn">${t.name}</span></div>`).join('')}</div>`;}).join('')}
     </div>
     <div class="card" style="margin-bottom:1rem;">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Best 3rd-place qualifiers <span style="font-size:11px;color:var(--tw);">${SESSION.third8.length}/8 selected</span></div>
@@ -567,7 +579,8 @@ function render(extraView,extraData){
     </div>
     <button class="btn btn-g" id="so" style="padding:5px 7px;" title="Sign out"><i class="ti ti-logout"></i></button>`;
     document.getElementById('so').onclick=async()=>{
-      if(SESSION.user?.token)await sbSignOut(SESSION.user.token).catch(()=>{});
+      if(SESSION.user?.token)await authLogout(SESSION.user.token);
+      clearAuthCookie();
       SESSION.user=null;SESSION.picks={};SESSION.view='home';render();toast('Signed out');
     };
   }else{
@@ -595,7 +608,78 @@ function render(extraView,extraData){
   }
   if(view==='groups'&&!extraView){
     document.getElementById('gs-reset')?.addEventListener('click',()=>{GKEYS.forEach(g=>{SESSION.groupOrder[g]=[0,1,2,3];});SESSION.picks={};render();});
-    viewRoot.querySelectorAll('.gs-team[data-g]').forEach(el=>{el.onclick=()=>{const g=el.dataset.g,pos=parseInt(el.dataset.pos);if(pos===0)return;const o=[...(SESSION.groupOrder[g]||[0,1,2,3])];[o[pos-1],o[pos]]=[o[pos],o[pos-1]];SESSION.groupOrder[g]=o;SESSION.picks={};render();};});
+    viewRoot.querySelectorAll('.gs-team[data-g]').forEach(el=>{
+      el.addEventListener('dragstart',e=>{
+        el.classList.add('dragging');
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain',el.dataset.g+':'+el.dataset.pos);
+      });
+      el.addEventListener('dragend',()=>{
+        el.classList.remove('dragging');
+        viewRoot.querySelectorAll('.gs-team.drag-over').forEach(d=>d.classList.remove('drag-over'));
+      });
+      el.addEventListener('dragover',e=>{
+        e.preventDefault();
+        e.dataTransfer.dropEffect='move';
+        const dragging=viewRoot.querySelector('.gs-team.dragging');
+        if(!dragging||dragging===el||dragging.dataset.g!==el.dataset.g)return;
+        viewRoot.querySelectorAll('.gs-team.drag-over').forEach(d=>d.classList.remove('drag-over'));
+        el.classList.add('drag-over');
+      });
+      el.addEventListener('dragleave',()=>{el.classList.remove('drag-over');});
+      el.addEventListener('drop',e=>{
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        const data=e.dataTransfer.getData('text/plain').split(':');
+        const fromG=data[0],fromPos=parseInt(data[1]),toPos=parseInt(el.dataset.pos);
+        if(fromG!==el.dataset.g||fromPos===toPos)return;
+        const o=[...(SESSION.groupOrder[fromG]||[0,1,2,3])];
+        const moved=o.splice(fromPos,1)[0];
+        o.splice(toPos,0,moved);
+        SESSION.groupOrder[fromG]=o;
+        SESSION.picks={};render();
+      });
+
+      // Touch drag support for mobile
+      let touchStartY=0,touchClone=null,touchGroup=null,touchFromPos=null;
+      el.addEventListener('touchstart',e=>{
+        const touch=e.touches[0];
+        touchStartY=touch.clientY;
+        touchGroup=el.dataset.g;
+        touchFromPos=parseInt(el.dataset.pos);
+        touchClone=el.cloneNode(true);
+        touchClone.style.cssText='position:fixed;z-index:100;pointer-events:none;opacity:.8;width:'+el.offsetWidth+'px;left:'+el.getBoundingClientRect().left+'px;top:'+touch.clientY+'px;transform:translateY(-50%);';
+        document.body.appendChild(touchClone);
+        el.classList.add('dragging');
+      },{passive:true});
+      el.addEventListener('touchmove',e=>{
+        if(!touchClone)return;
+        e.preventDefault();
+        const touch=e.touches[0];
+        touchClone.style.top=touch.clientY+'px';
+        viewRoot.querySelectorAll('.gs-team.drag-over').forEach(d=>d.classList.remove('drag-over'));
+        const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.gs-team[data-g="'+touchGroup+'"]');
+        if(target&&target!==el)target.classList.add('drag-over');
+      },{passive:false});
+      el.addEventListener('touchend',e=>{
+        if(touchClone){touchClone.remove();touchClone=null;}
+        el.classList.remove('dragging');
+        viewRoot.querySelectorAll('.gs-team.drag-over').forEach(d=>d.classList.remove('drag-over'));
+        const touch=e.changedTouches[0];
+        const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('.gs-team[data-g="'+touchGroup+'"]');
+        if(target&&target!==el){
+          const toPos=parseInt(target.dataset.pos);
+          if(touchFromPos!==toPos){
+            const o=[...(SESSION.groupOrder[touchGroup]||[0,1,2,3])];
+            const moved=o.splice(touchFromPos,1)[0];
+            o.splice(toPos,0,moved);
+            SESSION.groupOrder[touchGroup]=o;
+            SESSION.picks={};render();
+          }
+        }
+        touchGroup=null;touchFromPos=null;
+      });
+    });
     viewRoot.querySelectorAll('[data-3rd]').forEach(btn=>{btn.onclick=()=>{const g=btn.dataset['3rd'],idx=SESSION.third8.indexOf(g);if(idx>=0)SESSION.third8.splice(idx,1);else if(SESSION.third8.length<8)SESSION.third8.push(g);else{toast('Already 8 selected','err');return;}SESSION.picks={};render();};});
     document.getElementById('gs-done')?.addEventListener('click',()=>{if(SESSION.third8.length!==8){toast('Select exactly 8 third-place teams','err');return;}SESSION.view='bracket';render();});
     document.getElementById('gs-save')?.addEventListener('click',async()=>{await savePicksToDb();toast('Groups saved!','ok');});
@@ -623,6 +707,7 @@ function render(extraView,extraData){
 
 // ── Boot ─────────────────────────────────────────────────────
 (async()=>{
+  handleConfirmationCallback();
   setStatus('Loading leaderboard…');
   render();
   await loadLeaderboard();
