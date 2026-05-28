@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>World Cup 2026 Predictor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+<style>
+:root{
+  --bg1:#0d0d1a;--bg2:#13132a;--bg3:#0a0a14;--bgi:#1a1040;--bgs:#0d2a1a;--bgw:#2a1a00;--bgd:#2a0d0d;
+  --t1:#f0eeff;--t2:#a099cc;--t3:#6b6494;--ti:#a78bfa;--ts:#34d399;--tw:#fbbf24;--td:#f87171;
+  --bo3:rgba(167,139,250,0.12);--bo2:rgba(167,139,250,0.25);
+  --r8:10px;--r12:16px;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --grad1:linear-gradient(135deg,#7c3aed,#2563eb,#0891b2);
+  --grad2:linear-gradient(135deg,#f59e0b,#ef4444,#ec4899);
+  --grad3:linear-gradient(135deg,#10b981,#3b82f6,#8b5cf6);
+}
+*{box-sizing:border-box;}html,body{margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg3);color:var(--t1);min-height:100vh;line-height:1.5;
+  background-image:radial-gradient(ellipse at 20% 20%,rgba(124,58,237,0.15) 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 80%,rgba(6,182,212,0.12) 0%,transparent 50%);}
+button{font-family:inherit;cursor:pointer;}
+.wrap{max-width:1320px;margin:0 auto;padding:1rem 1.25rem;}
+.tab{padding:7px 13px;border-radius:var(--r8);border:0.5px solid var(--bo3);background:rgba(255,255,255,0.04);font-size:13px;color:var(--t2);transition:all .2s;}
+.tab:hover{background:rgba(167,139,250,0.15);color:var(--t1);}
+.tab.active{background:linear-gradient(135deg,rgba(124,58,237,0.4),rgba(37,99,235,0.4));color:#c4b5fd;border-color:rgba(167,139,250,0.5);box-shadow:0 0 16px rgba(124,58,237,0.25);}
+.card{background:rgba(255,255,255,0.04);border:0.5px solid var(--bo3);border-radius:var(--r12);padding:1rem 1.25rem;backdrop-filter:blur(12px);}
+.sc{background:rgba(255,255,255,0.06);border:0.5px solid var(--bo3);border-radius:var(--r8);padding:10px 14px;}
+.sc-l{font-size:11px;color:var(--t2);margin-bottom:3px;}
+.sc-v{font-size:20px;font-weight:600;}
+.btn{padding:7px 13px;border-radius:var(--r8);border:0.5px solid var(--bo2);background:rgba(255,255,255,0.06);font-size:13px;color:var(--t1);display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
+.btn:hover{background:rgba(167,139,250,0.15);transform:translateY(-1px);}
+.btn:active{transform:scale(.97);}
+.btn-p{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;box-shadow:0 4px 15px rgba(124,58,237,0.4);}
+.btn-p:hover{opacity:.9;transform:translateY(-1px);}
+.btn-s{background:linear-gradient(135deg,#059669,#0891b2);color:#fff;border:none;box-shadow:0 4px 15px rgba(5,150,105,0.4);}
+.btn-s:hover{opacity:.9;transform:translateY(-1px);}
+.btn-g{background:transparent;border-color:transparent;color:var(--t2);}
+.btn-g:hover{background:rgba(255,255,255,0.06);color:var(--t1);transform:none;}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important;}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;}
+.b-live{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.65;}}
+input[type=text],input[type=password],input[type=email]{width:100%;padding:9px 12px;border-radius:var(--r8);border:0.5px solid var(--bo3);background:rgba(255,255,255,0.06);font-size:13px;color:var(--t1);font-family:inherit;}
+input:focus{outline:none;border-color:rgba(167,139,250,0.6);box-shadow:0 0 0 3px rgba(124,58,237,0.2);}
+input::placeholder{color:var(--t3);}
+.toast{position:fixed;top:12px;right:12px;background:rgba(13,13,26,0.95);border:0.5px solid var(--bo2);border-radius:var(--r8);padding:10px 14px;font-size:13px;z-index:999;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.toast.ok{border-color:rgba(52,211,153,0.5);}
+.toast.err{border-color:rgba(248,113,113,0.5);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:40;padding:1rem;backdrop-filter:blur(10px);}
+.modal{background:#0f0f22;border:0.5px solid var(--bo2);border-radius:var(--r12);padding:1.5rem;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6);}
+.match{background:rgba(255,255,255,0.04);border:0.5px solid var(--bo3);border-radius:var(--r8);overflow:hidden;transition:all .2s;}
+.match.has-pick{border-color:rgba(167,139,250,0.5);box-shadow:0 0 12px rgba(124,58,237,0.2);}
+.mrow{display:flex;align-items:center;gap:7px;padding:6px 9px;transition:background .15s;font-size:12px;}
+.mrow:first-child{border-bottom:0.5px solid var(--bo3);}
+.mrow.clickable{cursor:pointer;}
+.mrow.clickable:hover{background:rgba(167,139,250,0.1);}
+.mrow.picked{background:linear-gradient(135deg,rgba(124,58,237,0.25),rgba(37,99,235,0.2));color:#c4b5fd;}
+.mrow.correct{background:rgba(52,211,153,0.15);color:var(--ts);}
+.mrow.wrong{background:rgba(248,113,113,0.15);color:var(--td);text-decoration:line-through;}
+.mrow.tbd{color:var(--t3);font-style:italic;}
+.tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rcol{display:flex;flex-direction:column;min-width:0;}
+.rl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px;padding-bottom:5px;border-bottom:0.5px solid var(--bo3);}
+.scrollx{overflow-x:auto;padding-bottom:8px;}
+.scrollx::-webkit-scrollbar{height:5px;}
+.scrollx::-webkit-scrollbar-track{background:rgba(255,255,255,0.04);}
+.scrollx::-webkit-scrollbar-thumb{background:rgba(167,139,250,0.3);border-radius:3px;}
+.lb-row{display:grid;grid-template-columns:36px 1fr 55px 55px 60px 50px;gap:6px;padding:8px 12px;font-size:12px;align-items:center;border-bottom:0.5px solid var(--bo3);cursor:pointer;transition:background .15s;}
+.lb-row:hover{background:rgba(167,139,250,0.08);}
+.lb-row:last-child{border-bottom:0;}
+.lb-row.me{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.15));color:#c4b5fd;border-radius:var(--r8);}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(167,139,250,0.2);border-top-color:var(--ti);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+.spinner-lg{width:32px;height:32px;border-width:3px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.gs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+.gs-card{background:rgba(255,255,255,0.04);border:0.5px solid var(--bo3);border-radius:var(--r12);overflow:hidden;transition:all .2s;}
+.gs-card:hover{border-color:var(--bo2);transform:translateY(-2px);}
+.gs-hd{background:linear-gradient(135deg,rgba(124,58,237,0.4),rgba(37,99,235,0.3));color:#c4b5fd;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;}
+.gs-team{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:12px;cursor:pointer;transition:background .15s;}
+.gs-team:not(:last-child){border-bottom:0.5px solid var(--bo3);}
+.gs-team:hover{background:rgba(167,139,250,0.1);}
+.gs-team.rk1{background:rgba(52,211,153,0.12);}
+.gs-team.rk2{background:rgba(167,139,250,0.1);}
+.gs-team.rk3{background:rgba(251,191,36,0.08);}
+.gs-team.rk4{opacity:.45;}
+.pos{font-size:10px;font-weight:700;width:16px;text-align:center;color:var(--t3);}
+.err-box{padding:10px 14px;background:rgba(248,113,113,0.1);border:0.5px solid rgba(248,113,113,0.3);border-radius:var(--r8);font-size:12px;color:var(--td);margin-top:6px;}
+.ok-box{padding:10px 14px;background:rgba(52,211,153,0.1);border:0.5px solid rgba(52,211,153,0.3);border-radius:var(--r8);font-size:12px;color:var(--ts);margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="toast-ct"></div>
+  <div id="modal-ct"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:34px;height:34px;border-radius:var(--r8);background:linear-gradient(135deg,#7c3aed,#0891b2);display:grid;place-items:center;color:#fff;font-size:17px;box-shadow:0 4px 14px rgba(124,58,237,0.5);"><i class="ti ti-ball-football"></i></div>
+      <div>
+        <div style="font-size:15px;font-weight:600;">World Cup 2026</div>
+        <div style="font-size:11px;color:var(--t2);" id="status-line">Connecting…</div>
+      </div>
+    </div>
+    <div id="nav-tabs" style="display:flex;gap:3px;flex-wrap:wrap;"></div>
+    <div id="user-area" style="display:flex;align-items:center;gap:7px;"></div>
+  </div>
+  <div id="view-root"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ── Supabase config ──────────────────────────────────────────
+const SB_URL='https://wnksdmlhexwjevnnyprf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indua3NkbWxoZXh3amV2bm55cHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjYxNDEsImV4cCI6MjA5NTQwMjE0MX0.tVwVg7HqfUZdQLFT2H0ywfPFuciEYDJDOWgnWogXkSk';
+
+// ── Supabase REST helpers ────────────────────────────────────
+const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+
+async function sbGet(table,query=''){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(table,body){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:H,body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(table,query,body){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+// Auth helpers
+async function sbSignUp(email,password){
+  const r=await fetch(`${SB_URL}/auth/v1/signup`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const j=await r.json();if(j.error)throw new Error(j.error.message||j.msg||JSON.stringify(j));return j;
+}
+async function sbSignIn(email,password){
+  const r=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const j=await r.json();if(j.error)throw new Error(j.error.message||j.error_description||JSON.stringify(j));return j;
+}
+async function sbSignOut(token){
+  await fetch(`${SB_URL}/auth/v1/logout`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});
+}
+
+// Authed headers
+function aH(token){return{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'};}
+
+async function sbGetAuthed(table,query,token){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:aH(token)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbUpsert(table,body,token){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...aH(token),'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbPatchAuthed(table,query,body,token){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{method:'PATCH',headers:{...aH(token),'Prefer':'return=representation'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+
+// ── App data ─────────────────────────────────────────────────
+const GROUPS={
+  A:[['Mexico','🇲🇽'],['South Korea','🇰🇷'],['South Africa','🇿🇦'],['Czechia','🇨🇿']],
+  B:[['Canada','🇨🇦'],['Switzerland','🇨🇭'],['Qatar','🇶🇦'],['Bosnia-Herzegovina','🇧🇦']],
+  C:[['Brazil','🇧🇷'],['Morocco','🇲🇦'],['Haiti','🇭🇹'],['Scotland','🏴󠁧󠁢󠁳󠁣󠁴󠁿']],
+  D:[['USA','🇺🇸'],['Paraguay','🇵🇾'],['Australia','🇦🇺'],['Türkiye','🇹🇷']],
+  E:[['Germany','🇩🇪'],['Curaçao','🇨🇼'],['Ivory Coast','🇨🇮'],['Ecuador','🇪🇨']],
+  F:[['Netherlands','🇳🇱'],['Japan','🇯🇵'],['Sweden','🇸🇪'],['Tunisia','🇹🇳']],
+  G:[['Belgium','🇧🇪'],['Egypt','🇪🇬'],['Iran','🇮🇷'],['New Zealand','🇳🇿']],
+  H:[['Spain','🇪🇸'],['Cape Verde','🇨🇻'],['Saudi Arabia','🇸🇦'],['Uruguay','🇺🇾']],
+  I:[['France','🇫🇷'],['Senegal','🇸🇳'],['Norway','🇳🇴'],['Iraq','🇮🇶']],
+  J:[['Argentina','🇦🇷'],['Algeria','🇩🇿'],['Austria','🇦🇹'],['Jordan','🇯🇴']],
+  K:[['Portugal','🇵🇹'],['DR Congo','🇨🇩'],['Uzbekistan','🇺🇿'],['Colombia','🇨🇴']],
+  L:[['England','🏴󠁧󠁢󠁥󠁮󠁧󠁿'],['Croatia','🇭🇷'],['Ghana','🇬🇭'],['Panama','🇵🇦']],
+};
+const GKEYS=Object.keys(GROUPS);
+const RLABELS={R32:'Round of 32',R16:'Round of 16',QF:'Quarterfinals',SEMI:'Semifinals',FINAL:'Final'};
+const ROUNDS=['R32','R16','QF','SEMI','FINAL'];
+const ROUND_PTS={R32:1,R16:2,QF:4,SEMI:8,FINAL:16};
+const PRIZE_DIST=[{r:1,p:50,label:'🥇 1st'},{r:2,p:25,label:'🥈 2nd'},{r:3,p:15,label:'🥉 3rd'},{r:4,p:7,label:'4th'},{r:5,p:3,label:'5th'}];
+
+const FIFA_R32_SEEDS=[
+  [{g:'A',p:0},{g:'B',p:1}],[{g:'C',p:0},{g:'D',p:1}],[{g:'E',p:0},{g:'F',p:1}],[{g:'G',p:0},{g:'H',p:1}],
+  [{g:'I',p:0},{g:'J',p:1}],[{g:'K',p:0},{g:'L',p:1}],[{g:'B',p:0},{g:'A',p:1}],[{g:'D',p:0},{g:'C',p:1}],
+  [{g:'F',p:0},{g:'E',p:1}],[{g:'H',p:0},{g:'G',p:1}],[{g:'J',p:0},{g:'I',p:1}],[{g:'L',p:0},{g:'K',p:1}],
+  [{type:'3rd',rank:1},{type:'3rd',rank:2}],[{type:'3rd',rank:3},{type:'3rd',rank:4}],
+  [{type:'3rd',rank:5},{type:'3rd',rank:6}],[{type:'3rd',rank:7},{type:'3rd',rank:8}],
+];
+
+function buildBracket(){
+  const ms=[];
+  ms.push({id:'F',round:'FINAL',slot:1,home:null,away:null,next:null,comp:false,winner:null});
+  ['S1','S2'].forEach((id,i)=>ms.push({id,round:'SEMI',slot:i+1,home:null,away:null,next:'F',comp:false,winner:null}));
+  ['Q1','Q2','Q3','Q4'].forEach((id,i)=>ms.push({id,round:'QF',slot:i+1,home:null,away:null,next:`S${Math.ceil((i+1)/2)}`,comp:false,winner:null}));
+  for(let i=1;i<=8;i++)ms.push({id:`R16-${i}`,round:'R16',slot:i,home:null,away:null,next:`Q${Math.ceil(i/2)}`,comp:false,winner:null});
+  for(let i=1;i<=16;i++)ms.push({id:`R32-${i}`,round:'R32',slot:i,home:null,away:null,next:`R16-${Math.ceil(i/2)}`,comp:false,winner:null});
+  return ms;
+}
+
+// ── Session state (in-memory, persisted to Supabase) ─────────
+let SESSION={
+  user:null,        // {id, email, username, entered, token}
+  view:'home',
+  bracket:buildBracket(),
+  groupOrder:{},    // {A:[0,1,2,3]...}
+  third8:GKEYS.slice(0,8),
+  picks:{},
+  leaderboard:[],   // loaded from Supabase
+};
+GKEYS.forEach(g=>{SESSION.groupOrder[g]=[0,1,2,3];});
+
+// ── DOM refs ──────────────────────────────────────────────────
+const toastCt=document.getElementById('toast-ct');
+const modalCt=document.getElementById('modal-ct');
+const navTabs=document.getElementById('nav-tabs');
+const userArea=document.getElementById('user-area');
+const viewRoot=document.getElementById('view-root');
+const statusLine=document.getElementById('status-line');
+
+function toast(msg,v=''){const el=document.createElement('div');el.className='toast'+(v?' '+v:'');el.textContent=msg;toastCt.appendChild(el);setTimeout(()=>el.remove(),4000);}
+function setStatus(msg){if(statusLine)statusLine.textContent=msg;}
+function openModal(html,cb){modalCt.innerHTML=`<div class="modal-bg" id="bd"><div class="modal">${html}</div></div>`;document.getElementById('bd').addEventListener('click',e=>{if(e.target.id==='bd')closeModal();});if(cb)cb();}
+function closeModal(){modalCt.innerHTML='';}
+function flagForTeam(name){for(const g of GKEYS){const f=GROUPS[g].find(([n])=>n.toLowerCase()===name?.toLowerCase()||name?.toLowerCase().includes(n.toLowerCase())||n.toLowerCase().includes(name?.toLowerCase()||''));if(f)return f[1];}return'🏳';}
+
+// ── Group / bracket logic ────────────────────────────────────
+function getStandings(g){
+  const order=SESSION.groupOrder[g]||[0,1,2,3];
+  return order.map(ti=>{const[name,flag]=GROUPS[g][ti];return{name,flag};});
+}
+function get3rdTeams(){return SESSION.third8.map(g=>{const t=getStandings(g)[2];return t?{name:t.name,flag:t.flag,group:g}:null;}).filter(Boolean);}
+function seedToTeam(seed){if(!seed)return null;if(seed.type==='3rd'){const t=get3rdTeams()[seed.rank-1];return t?t.name:null;}return getStandings(seed.g)[seed.p]?.name||null;}
+
+function populateR32(){
+  SESSION.bracket.filter(m=>m.round==='R32').sort((a,b)=>a.slot-b.slot).forEach((m,i)=>{
+    if(!m.comp){const s=FIFA_R32_SEEDS[i];m.home=seedToTeam(s[0]);m.away=seedToTeam(s[1]);}
+  });
+}
+function getPickEffective(){
+  populateR32();
+  const eff={};SESSION.bracket.forEach(m=>{eff[m.id]={...m};});
+  ['R32','R16','QF','SEMI'].forEach(round=>{
+    SESSION.bracket.filter(m=>m.round===round&&m.comp&&m.winner).sort((a,b)=>a.slot-b.slot).forEach(m=>{const nxt=eff[m.next];if(!nxt)return;m.slot%2===1?nxt.home=m.winner:nxt.away=m.winner;});
+    SESSION.bracket.filter(m=>m.round===round&&!m.comp).sort((a,b)=>a.slot-b.slot).forEach(m=>{
+      const pick=SESSION.picks[m.id];if(!pick||!m.next)return;
+      const em=eff[m.id];if(pick!==em.home&&pick!==em.away)return;
+      const nxt=eff[m.next];if(!nxt)return;
+      m.slot%2===1?nxt.home=pick:nxt.away=pick;
+    });
+  });
+  return eff;
+}
+function clearOrphans(){let ch=true;while(ch){ch=false;const eff=getPickEffective();for(const m of SESSION.bracket){const p=SESSION.picks[m.id];if(p==null)continue;const e=eff[m.id];if(p!==e.home&&p!==e.away){delete SESSION.picks[m.id];ch=true;}}}}
+
+function calcScore(picks){
+  let knock=0;
+  for(const m of SESSION.bracket){if(!m.comp||!m.winner)continue;const pts=ROUND_PTS[m.round]||0;if(picks[m.id]===m.winner){knock+=pts;if(m.round==='FINAL')knock+=16;}}
+  return knock;
+}
+
+// ── Supabase data ops ────────────────────────────────────────
+async function loadLeaderboard(){
+  try{
+    // Join picks with profiles to get username
+    const rows=await sbGet('picks','select=score,user_id,group_order,knockout_picks,profiles(username,entered)&order=score.desc');
+    SESSION.leaderboard=rows.filter(r=>r.profiles).map(r=>({
+      username:r.profiles.username,
+      score:r.score||0,
+      group_order:r.group_order,
+      knockout_picks:r.knockout_picks,
+      isMe:SESSION.user&&r.user_id===SESSION.user.id,
+    }));
+    setStatus(`${SESSION.leaderboard.length} players · live`);
+  }catch(e){setStatus('Connected');}
+}
+
+async function savePicksToDb(){
+  if(!SESSION.user)return;
+  const score=calcScore(SESSION.picks);
+  try{
+    await sbUpsert('picks',{
+      user_id:SESSION.user.id,
+      group_order:SESSION.groupOrder,
+      third8:SESSION.third8,
+      knockout_picks:SESSION.picks,
+      score,
+      updated_at:new Date().toISOString(),
+    },SESSION.user.token);
+    setStatus('Picks saved ✓');
+    await loadLeaderboard();
+  }catch(e){toast('Save failed: '+e.message,'err');}
+}
+
+async function markEntered(){
+  if(!SESSION.user)return;
+  try{
+    await sbPatchAuthed('profiles','id=eq.'+SESSION.user.id,{entered:true},SESSION.user.token);
+    SESSION.user.entered=true;
+    toast('Payment confirmed — you\'re in!','ok');
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// ── Auth flows ───────────────────────────────────────────────
+function openSignup(){
+  openModal(`
+    <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Create account</h3>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Saved to Supabase — access from any device.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Username</label><input id="s-user" type="text" placeholder="e.g. GoalMachine99"/></div>
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Email</label><input id="s-email" type="email" placeholder="you@example.com"/></div>
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Password</label><input id="s-pass" type="password" placeholder="min 6 characters"/></div>
+    </div>
+    <div id="s-err"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;">
+      <button class="btn btn-g" id="s-login">Already have an account? Log in</button>
+      <button class="btn btn-p" id="s-create">Create account</button>
+    </div>`,()=>{
+    document.getElementById('s-login').onclick=()=>{closeModal();openLogin();};
+    document.getElementById('s-create').onclick=async()=>{
+      const username=document.getElementById('s-user').value.trim();
+      const email=document.getElementById('s-email').value.trim();
+      const pass=document.getElementById('s-pass').value;
+      const errEl=document.getElementById('s-err');
+      if(!username||!email||!pass){errEl.innerHTML='<div class="err-box">Fill in all fields</div>';return;}
+      if(pass.length<6){errEl.innerHTML='<div class="err-box">Password must be at least 6 characters</div>';return;}
+      const btn=document.getElementById('s-create');btn.innerHTML='<span class="spinner"></span> Creating…';btn.disabled=true;
+      try{
+        const authData=await sbSignUp(email,pass);
+        if(!authData.access_token&&!authData.user)throw new Error('Signup failed — check your email for a confirmation link if required.');
+        const token=authData.access_token;
+        const userId=authData.user?.id||authData.id;
+        // Create profile
+        try{await sbUpsert('profiles',{id:userId,username,entered:false},token);}catch(e){/* may already exist */}
+        SESSION.user={id:userId,email,username,entered:false,token};
+        closeModal();render();
+        toast('Welcome, '+username+'! 🎉','ok');
+        setStatus('Signed in as '+username);
+        await loadLeaderboard();
+      }catch(e){
+        errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
+        btn.innerHTML='Create account';btn.disabled=false;
+      }
+    };
+  });
+}
+
+function openLogin(){
+  openModal(`
+    <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Log in</h3>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Your picks are saved in the cloud.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Email</label><input id="l-email" type="email" placeholder="you@example.com"/></div>
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Password</label><input id="l-pass" type="password" placeholder="your password"/></div>
+    </div>
+    <div id="l-err"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;">
+      <button class="btn btn-g" id="l-signup">No account? Sign up</button>
+      <button class="btn btn-p" id="l-login">Log in</button>
+    </div>`,()=>{
+    document.getElementById('l-signup').onclick=()=>{closeModal();openSignup();};
+    document.getElementById('l-login').onclick=async()=>{
+      const email=document.getElementById('l-email').value.trim();
+      const pass=document.getElementById('l-pass').value;
+      const errEl=document.getElementById('l-err');
+      const btn=document.getElementById('l-login');btn.innerHTML='<span class="spinner"></span> Logging in…';btn.disabled=true;
+      try{
+        const authData=await sbSignIn(email,pass);
+        const token=authData.access_token;
+        const userId=authData.user?.id;
+        // Load profile
+        const profiles=await sbGetAuthed('profiles',`id=eq.${userId}&select=username,entered`,token);
+        const profile=profiles[0]||{username:email.split('@')[0],entered:false};
+        // Load picks
+        const picksRows=await sbGetAuthed('picks',`user_id=eq.${userId}&select=group_order,third8,knockout_picks`,token);
+        if(picksRows[0]){
+          SESSION.groupOrder=picksRows[0].group_order||SESSION.groupOrder;
+          SESSION.third8=picksRows[0].third8||SESSION.third8;
+          SESSION.picks=picksRows[0].knockout_picks||{};
+        }
+        SESSION.user={id:userId,email,username:profile.username,entered:profile.entered,token};
+        closeModal();render();
+        toast('Welcome back, '+profile.username+'!','ok');
+        setStatus('Signed in as '+profile.username);
+        await loadLeaderboard();
+      }catch(e){
+        errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
+        btn.innerHTML='Log in';btn.disabled=false;
+      }
+    };
+  });
+}
+
+function openEnter(){
+  openModal(`
+    <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Enter the pool</h3>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Once you integrate Stripe, this button redirects to Stripe Checkout. For now, it marks you as entered in Supabase.</p>
+    <div style="padding:14px 16px;background:rgba(255,255,255,0.04);border-radius:var(--r8);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;color:var(--t2);">Entry fee</span><span style="font-size:24px;font-weight:800;">$10</span>
+    </div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:1rem;">🔒 Real payments via Stripe — see the Dev Guide tab to integrate.</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-g" id="mc">Cancel</button>
+      <button class="btn btn-s" id="mp">Confirm entry (demo)</button>
+    </div>`,()=>{
+    document.getElementById('mc').onclick=closeModal;
+    document.getElementById('mp').onclick=async()=>{
+      const btn=document.getElementById('mp');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+      await markEntered();
+      SESSION.user.entered=true;
+      closeModal();SESSION.view='groups';render();
+    };
+  });
+}
+
+// ── Pick flow ────────────────────────────────────────────────
+let saveTimer=null;
+function pickWinner(mid,team){
+  if(SESSION.locked)return;
+  SESSION.picks[mid]=team;clearOrphans();
+  if(Object.keys(SESSION.picks).length===31&&!SESSION._confetti){SESSION._confetti=true;if(window.confetti){confetti({particleCount:120,spread:70,origin:{y:.6}});}}
+  render();
+  // Debounce save — write to Supabase 2s after last pick
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>savePicksToDb(),2000);
+}
+
+// ── VIEWS ────────────────────────────────────────────────────
+function renderHome(){
+  const N=Math.max(SESSION.leaderboard.length,1);
+  return`
+  <div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:1.25rem;padding:2.5rem 2rem;background:linear-gradient(135deg,#1e0a4a 0%,#0a1a3a 40%,#0a2a1a 100%);border:0.5px solid rgba(167,139,250,0.2);box-shadow:0 24px 64px rgba(0,0,0,.5);">
+    <div style="position:absolute;top:-60px;right:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.35) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:absolute;bottom:-40px;left:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,0.25) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:relative;">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(251,191,36,0.15);border:0.5px solid rgba(251,191,36,0.35);border-radius:999px;font-size:11px;font-weight:600;color:var(--tw);margin-bottom:1rem;">⚽ FIFA WORLD CUP 2026 · USA 🇺🇸 CANADA 🇨🇦 MEXICO 🇲🇽</div>
+      <h1 style="font-size:clamp(26px,5vw,42px);font-weight:800;line-height:1.1;margin:0 0 .75rem;background:linear-gradient(135deg,#fff 0%,#c4b5fd 50%,#67e8f9 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Pick Every Match.<br>Win Real Cash.</h1>
+      <p style="font-size:14px;color:var(--t2);max-width:480px;margin:0 0 1.5rem;">48 teams. 12 groups. 64 matches. Build your full bracket, compete for the prize pool.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;">
+        ${[['🥇 1st Place','50% of pool','linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.1))','rgba(251,191,36,0.4)','#fbbf24'],['🥈 2nd Place','25% of pool','rgba(255,255,255,0.06)','var(--bo2)','var(--t1)'],['🥉 3rd Place','15% of pool','rgba(255,255,255,0.06)','var(--bo2)','var(--t1)']].map(([label,pct,bg,bc,tc])=>`
+          <div style="padding:12px 18px;background:${bg};border:0.5px solid ${bc};border-radius:var(--r12);min-width:120px;">
+            <div style="font-size:10px;color:var(--t2);margin-bottom:4px;">${label}</div>
+            <div style="font-size:20px;font-weight:800;color:${tc};">${pct}</div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        ${!SESSION.user
+          ?`<button class="btn btn-p" id="h-signup" style="font-size:14px;padding:10px 22px;font-weight:600;">🏆 Enter for $10</button>
+             <button class="btn btn-g" id="h-login" style="font-size:13px;">Already have an account? Log in</button>`
+          :!SESSION.user.entered
+          ?`<button class="btn btn-p" id="h-enter" style="font-size:14px;padding:10px 22px;font-weight:600;">🏆 Enter for $10</button>`
+          :`<button class="btn btn-s" id="h-groups" style="font-size:14px;padding:10px 22px;font-weight:600;">✏️ Edit my picks →</button>`}
+        <div style="font-size:12px;color:var(--t3);"><span style="color:var(--ts);">●</span> ${N} player${N!==1?'s':''} entered</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;background:var(--grad3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">How it works</div>
+      ${[['1','Sign up & pay $10 entry'],['2','Predict group stage finish order'],['3','Pick knockout round winners'],['4','Earn points as results come in'],['5','Top scorer wins the pool 🏆']].map(([n,t],i,a)=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${i<a.length-1?'border-bottom:0.5px solid var(--bo3);':''}"><div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#0891b2);display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">${n}</div><span style="font-size:12px;color:var(--t2);">${t}</span></div>`).join('')}
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;background:var(--grad2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Point system</div>
+      ${[['Group finish order','1 pt/team','var(--ts)'],['Round of 32','1 pt','var(--ti)'],['Round of 16','2 pts','var(--ti)'],['Quarterfinals','4 pts','var(--tw)'],['Semifinals','8 pts','var(--tw)'],['Final','16 pts','#f87171'],['🏆 Champion bonus','+16 pts','#fbbf24']].map(([k,v,c],i,a)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;${i<a.length-1?'border-bottom:0.5px solid var(--bo3);':''}"><span style="font-size:12px;color:var(--t2);">${k}</span><span style="font-size:12px;font-weight:700;color:${c};">${v}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderGroups(){
+  return`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:1rem;">
+      <div><div style="font-size:14px;font-weight:600;">Group Stage Predictions</div><div style="font-size:12px;color:var(--t2);">Click a team to move it up · earn 1 pt per correct position</div></div>
+      <button class="btn" id="gs-reset"><i class="ti ti-refresh"></i> Reset</button>
+    </div>
+    <div style="padding:8px 12px;background:rgba(251,191,36,0.08);border:0.5px solid rgba(251,191,36,0.2);border-radius:var(--r8);font-size:12px;color:var(--tw);margin-bottom:1rem;">💡 <strong>Green = 1st · Purple = 2nd · Gold = 3rd (maybe) · Dim = eliminated</strong></div>
+    <div class="gs-grid" style="margin-bottom:1.25rem;">
+      ${GKEYS.map(g=>{const st=getStandings(g);return`<div class="gs-card"><div class="gs-hd">Group ${g}</div>${st.map((t,i)=>`<div class="gs-team rk${i+1}" data-g="${g}" data-pos="${i}"><span class="pos">${i+1}</span><span>${t.flag}</span><span class="tn">${t.name}</span></div>`).join('')}</div>`;}).join('')}
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Best 3rd-place qualifiers <span style="font-size:11px;color:var(--tw);">${SESSION.third8.length}/8 selected</span></div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:8px;">Pick exactly 8 groups whose 3rd-place team qualifies for the R32.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${GKEYS.map(g=>{const on=SESSION.third8.includes(g);const t=getStandings(g)[2];return`<button class="btn ${on?'btn-s':''}" style="font-size:11px;" data-3rd="${g}">${t?.flag} ${t?.name} (${g}) ${on?'✓':''}</button>`;}).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-p" id="gs-done"><i class="ti ti-arrow-right"></i> Go to bracket</button>
+      <button class="btn btn-s" id="gs-save"><i class="ti ti-cloud-upload"></i> Save to cloud</button>
+    </div>`;
+}
+
+function renderBracket(picksOverride,readOnly,playerName){
+  const eff=getPickEffective();
+  const activePicks=picksOverride||SESSION.picks;
+  const sc=calcScore(activePicks);
+  function matchCard(m){
+    const e=eff[m.id];const h=e.home,a=e.away,pick=activePicks[m.id];
+    const isDone=m.comp&&m.winner;
+    function rowCls(tid){if(!tid)return'mrow tbd';const c=['mrow'];if(!isDone&&!readOnly)c.push('clickable');if(isDone){if(pick===tid&&m.winner===tid)c.push('correct');else if(pick===tid&&m.winner!==tid)c.push('wrong');}else if(pick===tid)c.push('picked');return c.join(' ');}
+    function teamRow(tid){if(!tid)return`<div class="mrow tbd"><span>·</span><span class="tn">TBD</span></div>`;const flag=flagForTeam(tid);const isPick=pick===tid;const isWin=isDone&&m.winner===tid;return`<div class="${rowCls(tid)}"${!readOnly?` data-mid="${m.id}" data-team="${tid}"`:''}><span style="font-size:13px;">${flag}</span><span class="tn">${tid}</span>${isPick?'<i class="ti ti-check" style="font-size:11px;flex-shrink:0;"></i>':''}${isWin&&!isPick?'<i class="ti ti-trophy" style="font-size:10px;flex-shrink:0;color:var(--tw);"></i>':''}</div>`;}
+    return`<div class="match ${activePicks[m.id]!=null?'has-pick':''}">${teamRow(h)}${teamRow(a)}</div>`;
+  }
+  const cols=ROUNDS.map(round=>{const ms=SESSION.bracket.filter(m=>m.round===round).sort((a,b)=>a.slot-b.slot);const pts=ROUND_PTS[round]||0;return`<div class="rcol" style="min-width:185px;"><div class="rl">${RLABELS[round]}${pts>0?` <span style="color:var(--ti);">${pts}pt${pts>1?'s':''}</span>`:''}${round==='FINAL'?' <span style="color:var(--tw);">+16</span>':''}</div><div style="display:flex;flex-direction:column;gap:6px;flex:1;justify-content:space-around;">${ms.map(m=>matchCard(m)).join('')}</div></div>`;}).join('');
+  return`
+    ${playerName?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:var(--r8);">
+      <button class="btn btn-g" id="back-lb" style="padding:5px 9px;"><i class="ti ti-arrow-left"></i> Back</button>
+      <div style="font-size:14px;font-weight:600;">${playerName}'s Bracket</div>
+      <div style="font-size:12px;color:var(--t2);">Score: <span style="color:var(--ts);font-weight:600;">${sc} pts</span></div>
+    </div>`:''}
+    ${!playerName?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.75rem;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:var(--r8);">
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);">Picks</div><div style="font-size:17px;font-weight:600;"><span style="color:var(--ts);">${Object.keys(activePicks).length}</span><span style="color:var(--t3);">/31</span></div></div>
+        <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);">Score</div><div style="font-size:17px;font-weight:600;color:var(--ts);">${sc}</div></div>
+      </div>
+      <div style="display:flex;gap:7px;">
+        <button class="btn btn-s" id="br-save" style="font-size:12px;"><i class="ti ti-cloud-upload"></i> Save</button>
+        <button class="btn btn-g" id="br-clear" style="font-size:12px;"><i class="ti ti-trash"></i> Clear</button>
+      </div>
+    </div>`:''}
+    <div class="scrollx"><div style="display:flex;gap:12px;min-width:1050px;">${cols}</div></div>`;
+}
+
+function renderLeaderboard(){
+  const rows=SESSION.leaderboard.length>0?SESSION.leaderboard:
+    [{username:SESSION.user?.username||'You',score:calcScore(SESSION.picks),knockout_picks:SESSION.picks,isMe:true}];
+  return`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:600;">Leaderboard <span style="font-size:12px;font-weight:400;color:var(--t2);">· click a player to see their bracket</span></div>
+      <button class="btn" id="lb-refresh" style="font-size:12px;"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="lb-row" style="background:rgba(255,255,255,0.04);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);border-radius:var(--r12) var(--r12) 0 0;cursor:default;">
+        <div>#</div><div>Player</div><div style="text-align:right;">Score</div><div style="text-align:right;">Pts</div><div style="text-align:right;">Prize</div><div></div>
+      </div>
+      ${rows.map((e,i)=>{const rank=i+1;const slot=PRIZE_DIST.find(d=>d.r===rank);return`<div class="lb-row${e.isMe?' me':''}" data-idx="${i}">
+        <div>${rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank}</div>
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${e.isMe?600:400};">${e.username}${e.isMe?' (you)':''}</div>
+        <div style="text-align:right;font-weight:700;color:${e.isMe?'inherit':'var(--ts)'};">${e.score}</div>
+        <div style="text-align:right;color:var(--t3);">pts</div>
+        <div style="text-align:right;font-weight:700;${slot?'color:var(--tw);':'color:var(--t3);'}">${slot?slot.p+'%':'—'}</div>
+        <div style="text-align:right;color:var(--t3);font-size:11px;"><i class="ti ti-chevron-right"></i></div>
+      </div>`;}).join('')}
+    </div>`;
+}
+
+// ── Main render ───────────────────────────────────────────────
+function render(extraView,extraData){
+  const view=extraView||SESSION.view;
+  const tabs=[
+    {id:'home',label:'Home',icon:'home'},
+    {id:'groups',label:'Groups',icon:'layout-grid'},
+    {id:'bracket',label:'Bracket',icon:'tournament',dis:!SESSION.user?.entered},
+    {id:'leaderboard',label:'Leaderboard',icon:'trophy'},
+  ];
+  navTabs.innerHTML=tabs.map(t=>`<button class="tab ${view===t.id&&!extraView?'active':''}" data-v="${t.id}" ${t.dis?'disabled style="opacity:.4;cursor:not-allowed;"':''}>
+    <i class="ti ti-${t.icon}" style="margin-right:3px;vertical-align:-2px;"></i>${t.label}</button>`).join('');
+  navTabs.querySelectorAll('[data-v]').forEach(b=>{b.onclick=()=>{if(!b.disabled){SESSION.view=b.dataset.v;render();}};});
+
+  if(SESSION.user){
+    userArea.innerHTML=`<div style="display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(255,255,255,0.06);border-radius:var(--r8);">
+      <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700;">${SESSION.user.username[0].toUpperCase()}</div>
+      <span style="font-size:12px;">${SESSION.user.username}</span>
+      ${SESSION.user.entered?'<span style="font-size:10px;color:var(--ts);">✓ entered</span>':''}
+    </div>
+    <button class="btn btn-g" id="so" style="padding:5px 7px;" title="Sign out"><i class="ti ti-logout"></i></button>`;
+    document.getElementById('so').onclick=async()=>{
+      if(SESSION.user?.token)await sbSignOut(SESSION.user.token).catch(()=>{});
+      SESSION.user=null;SESSION.picks={};SESSION.view='home';render();toast('Signed out');
+    };
+  }else{
+    userArea.innerHTML=`
+      <button class="btn btn-g" id="login-btn" style="font-size:12px;">Log in</button>
+      <button class="btn btn-p" id="su-btn" style="font-size:12px;">Sign up</button>`;
+    document.getElementById('su-btn').onclick=openSignup;
+    document.getElementById('login-btn').onclick=openLogin;
+  }
+
+  let html='';
+  if(extraView==='player-bracket'&&extraData){html=renderBracket(extraData.picks,true,extraData.username);}
+  else if(view==='home')html=renderHome();
+  else if(view==='groups')html=renderGroups();
+  else if(view==='bracket')html=renderBracket();
+  else if(view==='leaderboard')html=renderLeaderboard();
+  viewRoot.innerHTML=html;
+
+  // Bind
+  if(view==='home'&&!extraView){
+    const su=document.getElementById('h-signup');if(su)su.onclick=openSignup;
+    const li=document.getElementById('h-login');if(li)li.onclick=openLogin;
+    const en=document.getElementById('h-enter');if(en)en.onclick=openEnter;
+    const gr=document.getElementById('h-groups');if(gr)gr.onclick=()=>{SESSION.view='groups';render();};
+  }
+  if(view==='groups'&&!extraView){
+    document.getElementById('gs-reset')?.addEventListener('click',()=>{GKEYS.forEach(g=>{SESSION.groupOrder[g]=[0,1,2,3];});SESSION.picks={};render();});
+    viewRoot.querySelectorAll('.gs-team[data-g]').forEach(el=>{el.onclick=()=>{const g=el.dataset.g,pos=parseInt(el.dataset.pos);if(pos===0)return;const o=[...(SESSION.groupOrder[g]||[0,1,2,3])];[o[pos-1],o[pos]]=[o[pos],o[pos-1]];SESSION.groupOrder[g]=o;SESSION.picks={};render();};});
+    viewRoot.querySelectorAll('[data-3rd]').forEach(btn=>{btn.onclick=()=>{const g=btn.dataset['3rd'],idx=SESSION.third8.indexOf(g);if(idx>=0)SESSION.third8.splice(idx,1);else if(SESSION.third8.length<8)SESSION.third8.push(g);else{toast('Already 8 selected','err');return;}SESSION.picks={};render();};});
+    document.getElementById('gs-done')?.addEventListener('click',()=>{if(SESSION.third8.length!==8){toast('Select exactly 8 third-place teams','err');return;}SESSION.view='bracket';render();});
+    document.getElementById('gs-save')?.addEventListener('click',async()=>{await savePicksToDb();toast('Groups saved!','ok');});
+  }
+  if(view==='bracket'&&!extraView){
+    viewRoot.querySelectorAll('[data-mid]').forEach(el=>{el.onclick=()=>pickWinner(el.dataset.mid,el.dataset.team);});
+    document.getElementById('br-clear')?.addEventListener('click',()=>{SESSION.picks={};SESSION._confetti=false;render();toast('Picks cleared');});
+    document.getElementById('br-save')?.addEventListener('click',async()=>{await savePicksToDb();toast('Picks saved to cloud!','ok');});
+  }
+  if(view==='leaderboard'&&!extraView){
+    document.getElementById('lb-refresh')?.addEventListener('click',async()=>{await loadLeaderboard();render();toast('Leaderboard refreshed','ok');});
+    viewRoot.querySelectorAll('.lb-row[data-idx]').forEach(row=>{
+      row.onclick=()=>{
+        const idx=parseInt(row.dataset.idx);
+        const entry=SESSION.leaderboard.length>0?SESSION.leaderboard[idx]:{username:SESSION.user?.username,picks:SESSION.picks};
+        if(!entry)return;
+        render('player-bracket',{username:entry.username,picks:entry.knockout_picks||entry.picks||{}});
+      };
+    });
+  }
+  if(extraView==='player-bracket'){
+    document.getElementById('back-lb')?.addEventListener('click',()=>{SESSION.view='leaderboard';render();});
+  }
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+(async()=>{
+  setStatus('Loading leaderboard…');
+  render();
+  await loadLeaderboard();
+  render();
+})();
+
+})();
+</script>
+</body>
+</html>
