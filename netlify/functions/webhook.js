@@ -18,15 +18,9 @@ exports.handler = async (event) => {
     const session = stripeEvent.data.object;
     const userId = session.metadata.userId;
 
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': process.env.SUPABASE_SERVICE_KEY,
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ entered: true }),
-    });
+    const { getDatabase } = await import('@netlify/database');
+    const db = getDatabase();
+    await db.sql`UPDATE profiles SET entered = true WHERE id = ${userId}`;
   }
 
   return { statusCode: 200, body: JSON.stringify({ received: true }) };
