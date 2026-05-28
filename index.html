@@ -142,8 +142,27 @@ async function sbSignIn(email,password){
   const r=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
   const j=await r.json();if(j.error)throw new Error(j.error.message||j.error_description||JSON.stringify(j));return j;
 }
+async function sbRefreshToken(refreshToken){
+  const r=await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+  const j=await r.json();if(j.error)throw new Error(j.error.message||j.error_description||JSON.stringify(j));return j;
+}
+async function sbResetPassword(email){
+  const r=await fetch(`${SB_URL}/auth/v1/recover`,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
+  if(!r.ok){const j=await r.json();throw new Error(j.error?.message||j.msg||'Failed to send reset email');}
+}
 async function sbSignOut(token){
   await fetch(`${SB_URL}/auth/v1/logout`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});
+}
+
+// Session persistence
+function saveSession(user,refreshToken){
+  try{localStorage.setItem('wc2026_session',JSON.stringify({user,refreshToken}));}catch(e){}
+}
+function loadSession(){
+  try{const s=localStorage.getItem('wc2026_session');return s?JSON.parse(s):null;}catch(e){return null;}
+}
+function clearSession(){
+  try{localStorage.removeItem('wc2026_session');}catch(e){}
 }
 
 // Authed headers
@@ -330,12 +349,18 @@ function openSignup(){
       const btn=document.getElementById('s-create');btn.innerHTML='<span class="spinner"></span> Creating…';btn.disabled=true;
       try{
         const authData=await sbSignUp(email,pass);
-        if(!authData.access_token&&!authData.user)throw new Error('Signup failed — check your email for a confirmation link if required.');
+        if(!authData.access_token){
+          closeModal();
+          toast('Check your email for a confirmation link, then log in.','ok');
+          setStatus('Confirm your email to continue');
+          return;
+        }
         const token=authData.access_token;
+        const refreshToken=authData.refresh_token;
         const userId=authData.user?.id||authData.id;
-        // Create profile
         try{await sbUpsert('profiles',{id:userId,username,entered:false},token);}catch(e){/* may already exist */}
         SESSION.user={id:userId,email,username,entered:false,token};
+        saveSession(SESSION.user,refreshToken);
         closeModal();render();
         toast('Welcome, '+username+'! 🎉','ok');
         setStatus('Signed in as '+username);
@@ -359,9 +384,13 @@ function openLogin(){
     <div id="l-err"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;">
       <button class="btn btn-g" id="l-signup">No account? Sign up</button>
-      <button class="btn btn-p" id="l-login">Log in</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-g" id="l-forgot" style="font-size:11px;color:var(--ti);">Forgot password?</button>
+        <button class="btn btn-p" id="l-login">Log in</button>
+      </div>
     </div>`,()=>{
     document.getElementById('l-signup').onclick=()=>{closeModal();openSignup();};
+    document.getElementById('l-forgot').onclick=()=>{closeModal();openForgotPassword();};
     document.getElementById('l-login').onclick=async()=>{
       const email=document.getElementById('l-email').value.trim();
       const pass=document.getElementById('l-pass').value;
@@ -370,11 +399,10 @@ function openLogin(){
       try{
         const authData=await sbSignIn(email,pass);
         const token=authData.access_token;
+        const refreshToken=authData.refresh_token;
         const userId=authData.user?.id;
-        // Load profile
         const profiles=await sbGetAuthed('profiles',`id=eq.${userId}&select=username,entered`,token);
         const profile=profiles[0]||{username:email.split('@')[0],entered:false};
-        // Load picks
         const picksRows=await sbGetAuthed('picks',`user_id=eq.${userId}&select=group_order,third8,knockout_picks`,token);
         if(picksRows[0]){
           SESSION.groupOrder=picksRows[0].group_order||SESSION.groupOrder;
@@ -382,6 +410,7 @@ function openLogin(){
           SESSION.picks=picksRows[0].knockout_picks||{};
         }
         SESSION.user={id:userId,email,username:profile.username,entered:profile.entered,token};
+        saveSession(SESSION.user,refreshToken);
         closeModal();render();
         toast('Welcome back, '+profile.username+'!','ok');
         setStatus('Signed in as '+profile.username);
@@ -389,6 +418,36 @@ function openLogin(){
       }catch(e){
         errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
         btn.innerHTML='Log in';btn.disabled=false;
+      }
+    };
+  });
+}
+
+function openForgotPassword(){
+  openModal(`
+    <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;">Reset password</h3>
+    <p style="font-size:12px;color:var(--t2);margin:0 0 1.25rem;">Enter your email and we'll send a password reset link.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div><label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Email</label><input id="f-email" type="email" placeholder="you@example.com"/></div>
+    </div>
+    <div id="f-msg"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;">
+      <button class="btn btn-g" id="f-back">Back to log in</button>
+      <button class="btn btn-p" id="f-send">Send reset link</button>
+    </div>`,()=>{
+    document.getElementById('f-back').onclick=()=>{closeModal();openLogin();};
+    document.getElementById('f-send').onclick=async()=>{
+      const email=document.getElementById('f-email').value.trim();
+      const msgEl=document.getElementById('f-msg');
+      if(!email){msgEl.innerHTML='<div class="err-box">Enter your email address</div>';return;}
+      const btn=document.getElementById('f-send');btn.innerHTML='<span class="spinner"></span> Sending…';btn.disabled=true;
+      try{
+        await sbResetPassword(email);
+        msgEl.innerHTML='<div class="ok-box">Reset link sent! Check your email inbox (and spam folder).</div>';
+        btn.innerHTML='Sent ✓';
+      }catch(e){
+        msgEl.innerHTML=`<div class="err-box">${e.message}</div>`;
+        btn.innerHTML='Send reset link';btn.disabled=false;
       }
     };
   });
@@ -568,6 +627,7 @@ function render(extraView,extraData){
     <button class="btn btn-g" id="so" style="padding:5px 7px;" title="Sign out"><i class="ti ti-logout"></i></button>`;
     document.getElementById('so').onclick=async()=>{
       if(SESSION.user?.token)await sbSignOut(SESSION.user.token).catch(()=>{});
+      clearSession();
       SESSION.user=null;SESSION.picks={};SESSION.view='home';render();toast('Signed out');
     };
   }else{
@@ -622,8 +682,36 @@ function render(extraView,extraData){
 }
 
 // ── Boot ─────────────────────────────────────────────────────
+async function restoreSession(){
+  const saved=loadSession();
+  if(!saved||!saved.refreshToken)return;
+  try{
+    setStatus('Restoring session…');
+    const authData=await sbRefreshToken(saved.refreshToken);
+    const token=authData.access_token;
+    const newRefresh=authData.refresh_token;
+    const userId=authData.user?.id||saved.user?.id;
+    if(!token||!userId)throw new Error('Invalid session');
+    const profiles=await sbGetAuthed('profiles',`id=eq.${userId}&select=username,entered`,token);
+    const profile=profiles[0]||{username:saved.user?.username||'User',entered:false};
+    const picksRows=await sbGetAuthed('picks',`user_id=eq.${userId}&select=group_order,third8,knockout_picks`,token);
+    if(picksRows[0]){
+      SESSION.groupOrder=picksRows[0].group_order||SESSION.groupOrder;
+      SESSION.third8=picksRows[0].third8||SESSION.third8;
+      SESSION.picks=picksRows[0].knockout_picks||{};
+    }
+    SESSION.user={id:userId,email:saved.user?.email||'',username:profile.username,entered:profile.entered,token};
+    saveSession(SESSION.user,newRefresh);
+    setStatus('Signed in as '+profile.username);
+  }catch(e){
+    clearSession();
+    setStatus('Session expired — please log in again');
+  }
+}
+
 (async()=>{
-  setStatus('Loading leaderboard…');
+  setStatus('Loading…');
+  await restoreSession();
   render();
   await loadLeaderboard();
   render();
